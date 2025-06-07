@@ -22,7 +22,7 @@ export const getAvailableUsers = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-import { User } from '../models/User.js';
+
 
 export const updateProfile = async (req, res) => {
   try {
