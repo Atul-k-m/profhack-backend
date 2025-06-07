@@ -3,17 +3,23 @@ import transporter from '../config/email.js';
 export const sendOTPEmail = async (email, otp, name = 'Professor') => {
   const mailOptions = {
     from: {
-      name: 'ReeBooT 2025',
+      name: 'ReeBooT  2025',
       address: process.env.EMAIL_USER || 'your-email@gmail.com'
     },
     to: email,
-    subject: 'ReeBooT 2025 – Email Verification OTP',
+    subject: 'ReeBooT Faculty Hackathon 2025 – Email Verification OTP',
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <!-- Header -->
-        <div style="background: #1a237e; padding: 30px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
-            ReeBooT 2025
+        <!-- Header with Logo -->
+        <div style="background: #1a237e; padding: 20px; text-align: center;">
+          <!-- Replace the src below with your actual logo URL -->
+          <img 
+            src="./logo.jpeg" 
+            alt="ReeBooT Logo" 
+            style="max-height: 60px; margin-bottom: 10px;"
+          />
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">
+            ReeBooT Faculty Hackathon 2025
           </h1>
         </div>
         
@@ -22,7 +28,7 @@ export const sendOTPEmail = async (email, otp, name = 'Professor') => {
           <h2 style="color: #333333; margin-bottom: 20px;">Dear ${name},</h2>
           
           <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-            Thank you for registering for the <strong>ReeBooT Faculty Hackathon 2025</strong>. As part of our verification process, please use the following One-Time Password (OTP) to confirm your email address:
+            Thank you for registering for the <strong>ReeBooT 2025</strong>. As part of our verification process, please use the following One-Time Password (OTP) to confirm your email address:
           </p>
           
           <div style="background: #f1f1f1; border: 1px solid #1a237e; padding: 30px; text-align: center; margin: 30px 0;">
@@ -42,14 +48,14 @@ export const sendOTPEmail = async (email, otp, name = 'Professor') => {
           
           <p style="color: #555555; font-size: 14px; line-height: 1.6;">
             If you did not initiate this request or if you have any questions, please contact our support team at 
-            <a href="mailto:support@reeboothack2025.org" style="color: #1a237e; text-decoration: none;">support@reeboothack2025.org</a>.
+            <a href="mailto:reeboot@bmsit.in" style="color: #1a237e; text-decoration: none;">reeboot@bmsit.in</a>.
           </p>
         </div>
         
         <!-- Footer -->
         <div style="background: #f1f1f1; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
           <p style="color: #777777; font-size: 12px; margin: 0; text-align: center;">
-            You are receiving this email because you registered for the ReeBooT Faculty Hackathon 2025. This is an automated message; please do not reply directly to this email.
+            You are receiving this email because you registered for the ReeBooT  2025. This is an automated message; please do not reply directly to this email.
           </p>
         </div>
       </div>
