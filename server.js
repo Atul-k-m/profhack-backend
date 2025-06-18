@@ -5,11 +5,14 @@ import cron from 'node-cron';
 const PORT = process.env.PORT || 5000;
 
 
-cron.schedule('*/10 * * * *', () => {
-  
-  console.log('ping', new Date().toISOString());
+const task = cron.schedule('*/10 * * * *', () => {
+    console.log('Cron ping:', new Date().toISOString());
+}, {
+    scheduled: true  
 });
 
+console.log('Cron job scheduled:', task.scheduled);
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
