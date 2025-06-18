@@ -3,10 +3,32 @@ import Team from '../models/Team.js';
 
 // Department categorization based on your frontend
 const DEPARTMENT_GROUPS = {
-  core: ['Physics', 'Chemistry', 'Mathematics', 'MBA', 'Humanities and Social Science'],
-  engineering: ['Mechanical Engineering', 'Civil Engineering', 'EEE', 'ECE', 'ETC'],
-  cse: ['CSE', 'ISE', 'AI&ML', 'CSBS', 'MCA']
+  foundation: [
+    'Physics', 
+    'Chemistry', 
+    'Mathematics', 
+    'Master of Business Administration', 
+    'Humanities and Social Science',
+    'Humanities & Social Science'
+  ],
+  structural: [
+    'Mechanical Engineering', 
+    'Civil Engineering', 
+    'Electrical & Electronics Engineering',
+    'Electronics & Communication Engineering', 
+    'Electronics & Telecommunication Engineering'
+  ],
+  innovation: [
+    'Computer Science & Engineering',
+    'Information Science & Engineering', 
+    'Artificial Intelligence and Machine Learning',
+    'Computer Science and Business Systems', 
+    'Master of Computer Applications',
+    // Keep abbreviations as fallback
+    'innovation', 'ISE', 'AI&ML', 'CSBS'
+  ]
 };
+
 
 // Helper function to normalize gender
 const normalizeGender = (gender) => {
@@ -61,18 +83,18 @@ export const validateTeamComposition = async (leaderDepartment, memberIds, leade
     }
 
     // Rule 3: Check group constraints
-    const cseCount = allMembers.filter(m => DEPARTMENT_GROUPS.cse.includes(m.department)).length;
-    const engineeringCount = allMembers.filter(m => DEPARTMENT_GROUPS.engineering.includes(m.department)).length;
-    const coreCount = allMembers.filter(m => DEPARTMENT_GROUPS.core.includes(m.department)).length;
+    const innovationCount = allMembers.filter(m => DEPARTMENT_GROUPS.innovation.includes(m.department)).length;
+    const structuralCount = allMembers.filter(m => DEPARTMENT_GROUPS.structural.includes(m.department)).length;
+    const foundationCount = allMembers.filter(m => DEPARTMENT_GROUPS.foundation.includes(m.department)).length;
 
-    if (cseCount > 2) {
-      errors.push(`Too many CSE group members (${cseCount}/2 max)`);
+    if (innovationCount > 2) {
+      errors.push(`Too many innovation group members (${innovationCount}/2 max)`);
     }
-    if (engineeringCount > 2) {
-      errors.push(`Too many Engineering group members (${engineeringCount}/2 max)`);
+    if (structuralCount > 2) {
+      errors.push(`Too many structural group members (${structuralCount}/2 max)`);
     }
-    if (coreCount > 1) {
-      errors.push(`Too many Core group members (${coreCount}/1 max)`);
+    if (foundationCount > 1) {
+      errors.push(`Too many foundation group members (${foundationCount}/1 max)`);
     }
 
     // Rule 4: Check gender composition - minimum 2 female teachers
@@ -96,9 +118,9 @@ export const validateTeamComposition = async (leaderDepartment, memberIds, leade
       totalMembers: allMembers.length,
       membersWithGender: membersWithGender.length,
       femaleCount: femaleMembers.length,
-      cseCount,
-      engineeringCount,
-      coreCount,
+      innovationCount,
+      structuralCount,
+      foundationCount,
       departments: departments,
       membersWithoutGender: membersWithoutGender.map(m => m.name)
     });
