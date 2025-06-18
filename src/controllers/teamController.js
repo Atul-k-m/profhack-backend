@@ -189,6 +189,17 @@ export const leaveTeam = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id || req.user.userId;
 
+    // Validate that we have a valid team ID
+    if (!id) {
+      return res.status(400).json({ message: 'Team ID is required' });
+    }
+
+    // Validate that we have a valid user ID
+    if (!userId) {
+      return res.status(401).json({ message: 'User authentication required' });
+    }
+
+    // Find the team
     const team = await Team.findById(id);
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -202,21 +213,52 @@ export const leaveTeam = async (req, res) => {
     }
 
     // Check if user is a member
-    if (!team.members.includes(userId)) {
+    const memberIndex = team.members.findIndex(memberId => memberId.toString() === userId.toString());
+    if (memberIndex === -1) {
       return res.status(400).json({ message: 'You are not a member of this team' });
     }
 
-    // Remove user from team
-    team.members = team.members.filter(memberId => memberId.toString() !== userId.toString());
+    // Remove user from team members array
+    team.members.splice(memberIndex, 1);
     await team.save();
 
-    // Update user record
-    await User.findByIdAndUpdate(userId, { $unset: { team: 1 } });
+    // Update user record to remove team reference
+    const userUpdateResult = await User.findByIdAndUpdate(
+      userId, 
+      { $unset: { team: 1 } },
+      { new: true }
+    );
 
-    res.json({ message: 'Successfully left the team' });
+    // Check if user update was successful
+    if (!userUpdateResult) {
+      // Rollback: add user back to team
+      team.members.push(userId);
+      await team.save();
+      return res.status(500).json({ message: 'Failed to update user record' });
+    }
+
+    res.json({ 
+      message: 'Successfully left the team',
+      teamId: id,
+      userId: userId.toString()
+    });
+
   } catch (error) {
     console.error('Leave team error:', error);
-    res.status(500).json({ message: 'Server error leaving team' });
+    
+    // Provide more specific error information
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid team ID format' });
+    }
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Validation error: ' + error.message });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error leaving team',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
