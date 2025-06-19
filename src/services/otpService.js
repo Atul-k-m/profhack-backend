@@ -1,84 +1,133 @@
-// otpService.js - Complete implementation with password reset functionality
-
+// services/otpService.js - Updated with password reset functionality
 import { OTP_EXPIRES_IN, PASSWORD_RESET_TOKEN_EXPIRES } from '../utils/constants.js';
 
 // In-memory storage for OTPs and password reset tokens
-const otpStore = new Map();
-const passwordResetStore = new Map();
+// In production, consider using Redis or a database
+const otpStorage = new Map();
+const passwordResetStorage = new Map();
 
+// OTP Functions
 export const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 export const storeOTP = (email, otp) => {
   const expires = Date.now() + OTP_EXPIRES_IN;
-  otpStore.set(email, {
-    otp,
-    expires,
+  otpStorage.set(email, {
+    otp: otp,
+    expires: expires,
     attempts: 0,
     verified: false
   });
+  
+  // Auto cleanup after expiry
+  setTimeout(() => {
+    if (otpStorage.has(email)) {
+      const data = otpStorage.get(email);
+      if (Date.now() > data.expires) {
+        otpStorage.delete(email);
+      }
+    }
+  }, OTP_EXPIRES_IN + 1000);
+  
   return expires;
 };
 
 export const getOTPData = (email) => {
-  return otpStore.get(email);
+  return otpStorage.get(email) || null;
 };
 
 export const deleteOTP = (email) => {
-  otpStore.delete(email);
+  return otpStorage.delete(email);
 };
 
 export const incrementAttempts = (email) => {
-  const data = otpStore.get(email);
+  const data = otpStorage.get(email);
   if (data) {
     data.attempts += 1;
-    otpStore.set(email, data);
+    otpStorage.set(email, data);
   }
 };
 
 export const markAsVerified = (email) => {
-  const data = otpStore.get(email);
+  const data = otpStorage.get(email);
   if (data) {
     data.verified = true;
-    otpStore.set(email, data);
+    otpStorage.set(email, data);
+    
+    // Keep verified status for 10 minutes to allow registration
+    setTimeout(() => {
+      deleteOTP(email);
+    }, 10 * 60 * 1000);
   }
 };
 
-// Password Reset Token Functions
+// Password Reset Functions
 export const storePasswordResetToken = (email, token) => {
   const expires = Date.now() + PASSWORD_RESET_TOKEN_EXPIRES;
-  passwordResetStore.set(email, {
-    token,
-    expires,
-    createdAt: Date.now()
+  passwordResetStorage.set(email, {
+    token: token,
+    expires: expires,
+    used: false
   });
+  
+  // Auto cleanup after expiry
+  setTimeout(() => {
+    if (passwordResetStorage.has(email)) {
+      const data = passwordResetStorage.get(email);
+      if (Date.now() > data.expires) {
+        passwordResetStorage.delete(email);
+      }
+    }
+  }, PASSWORD_RESET_TOKEN_EXPIRES + 1000);
+  
   return expires;
 };
 
 export const getPasswordResetData = (email) => {
-  return passwordResetStore.get(email);
+  return passwordResetStorage.get(email) || null;
 };
 
 export const deletePasswordResetToken = (email) => {
-  passwordResetStore.delete(email);
+  return passwordResetStorage.delete(email);
 };
 
-// Clean up expired tokens periodically
-setInterval(() => {
+export const markTokenAsUsed = (email) => {
+  const data = passwordResetStorage.get(email);
+  if (data) {
+    data.used = true;
+    passwordResetStorage.set(email, data);
+  }
+};
+
+// Utility function to clean up expired entries
+export const cleanupExpiredEntries = () => {
   const now = Date.now();
   
-  // Clean expired OTPs
-  for (const [email, data] of otpStore.entries()) {
+  // Clean OTPs
+  for (const [email, data] of otpStorage.entries()) {
     if (now > data.expires) {
-      otpStore.delete(email);
+      otpStorage.delete(email);
     }
   }
   
-  // Clean expired password reset tokens
-  for (const [email, data] of passwordResetStore.entries()) {
+  // Clean password reset tokens
+  for (const [email, data] of passwordResetStorage.entries()) {
     if (now > data.expires) {
-      passwordResetStore.delete(email);
+      passwordResetStorage.delete(email);
     }
   }
-}, 5 * 60 * 1000); // Clean every 5 minutes
+};
+
+// Run cleanup every 5 minutes
+setInterval(cleanupExpiredEntries, 5 * 60 * 1000);
+
+// Export storage for debugging (remove in production)
+export const getStorageStats = () => {
+  return {
+    otpCount: otpStorage.size,
+    passwordResetCount: passwordResetStorage.size,
+    otpEntries: Array.from(otpStorage.keys()),
+    passwordResetEntries: Array.from(passwordResetStorage.keys())
+  };
+};
