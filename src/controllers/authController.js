@@ -1,14 +1,17 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { sendOTPEmail } from '../services/emailService.js';
+import { sendOTPEmail, sendPasswordResetEmail } from '../services/emailService.js';
 import { 
   generateOTP, 
   storeOTP, 
   getOTPData, 
   deleteOTP, 
   incrementAttempts, 
-  markAsVerified 
+  markAsVerified,
+  storePasswordResetToken,
+  getPasswordResetData,
+  deletePasswordResetToken
 } from '../services/otpService.js';
 import { isValidEmail, validateRegistrationData } from '../utils/validation.js';
 import { 
@@ -16,7 +19,8 @@ import {
   JWT_EXPIRES_IN, 
   MAX_OTP_ATTEMPTS, 
   OTP_COOLDOWN_TIME, 
-  BCRYPT_SALT_ROUNDS 
+  BCRYPT_SALT_ROUNDS,
+  PASSWORD_RESET_TOKEN_EXPIRES 
 } from '../utils/constants.js';
 
 export const sendOTP = async (req, res) => {
@@ -40,8 +44,6 @@ export const sendOTP = async (req, res) => {
     const expires = storeOTP(email, otp);
     
     await sendOTPEmail(email, otp, name);
-    
-
     
     res.json({ 
       message: 'OTP sent successfully to your email',
@@ -121,7 +123,6 @@ export const resendOTP = async (req, res) => {
     
     await sendOTPEmail(email, otp, name);
     
-    
     res.json({ 
       message: 'New OTP sent successfully',
       expires: expires 
@@ -142,7 +143,6 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: validationErrors.join(', ') });
     }
 
-  
     const storedData = { verified: true }; // override manually for testing
 
     if (!storedData || !storedData.verified) {
@@ -186,10 +186,8 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body; 
-
     
     const isEmail = email.includes('@');
-    
     
     const user = await User.findOne(
       isEmail 
@@ -226,5 +224,154 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
+  }
+};
+
+// NEW FORGOT PASSWORD FUNCTIONALITY
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.json({ message: 'If this email is registered, you will receive a password reset link' });
+    }
+    
+    // Generate a secure token for password reset
+    const resetToken = jwt.sign(
+      { userId: user._id, email: user.email, purpose: 'password_reset' },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    
+    // Store the reset token
+    const expires = storePasswordResetToken(email, resetToken);
+    
+    // Send password reset email
+    await sendPasswordResetEmail(email, resetToken, user.name);
+    
+    res.json({ 
+      message: 'If this email is registered, you will receive a password reset link',
+      expires: expires 
+    });
+    
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Failed to process password reset request' });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+    
+    // Verify the token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+    
+    // Check if token is for password reset
+    if (decoded.purpose !== 'password_reset') {
+      return res.status(400).json({ message: 'Invalid token purpose' });
+    }
+    
+    // Check if token is still stored (not used)
+    const storedData = getPasswordResetData(decoded.email);
+    if (!storedData || storedData.token !== token) {
+      return res.status(400).json({ message: 'Token has been used or expired' });
+    }
+    
+    // Check if token has expired
+    if (Date.now() > storedData.expires) {
+      deletePasswordResetToken(decoded.email);
+      return res.status(400).json({ message: 'Reset token has expired' });
+    }
+    
+    // Find user and update password
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+    
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+    
+    // Update user password
+    user.password = hashedPassword;
+    await user.save();
+    
+    // Delete the used token
+    deletePasswordResetToken(decoded.email);
+    
+    res.json({ message: 'Password reset successful! You can now login with your new password.' });
+    
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Failed to reset password' });
+  }
+};
+
+export const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+    
+    // Verify the token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+    
+    // Check if token is for password reset
+    if (decoded.purpose !== 'password_reset') {
+      return res.status(400).json({ message: 'Invalid token purpose' });
+    }
+    
+    // Check if token is still stored (not used)
+    const storedData = getPasswordResetData(decoded.email);
+    if (!storedData || storedData.token !== token) {
+      return res.status(400).json({ message: 'Token has been used or expired' });
+    }
+    
+    // Check if token has expired
+    if (Date.now() > storedData.expires) {
+      deletePasswordResetToken(decoded.email);
+      return res.status(400).json({ message: 'Reset token has expired' });
+    }
+    
+    res.json({ 
+      message: 'Token is valid',
+      email: decoded.email 
+    });
+    
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+    res.status(500).json({ message: 'Failed to verify token' });
   }
 };
