@@ -1,4 +1,4 @@
-// otpService.js - Updated with password reset functionality
+// otpService.js - Complete implementation with password reset functionality
 
 import { OTP_EXPIRES_IN, PASSWORD_RESET_TOKEN_EXPIRES } from '../utils/constants.js';
 
