@@ -4,11 +4,11 @@ import { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, FRONTEND_URL } from '..
 
 class EmailService {
   constructor() {
-    this.transporter = this.createTransport();
+    this.transporter = this.createTransporter();
   }
 
   createTransporter() {
-    return nodemailer.createTransport({
+    return nodemailer.createTransporter({
       host: EMAIL_HOST,
       port: EMAIL_PORT,
       secure: false, // true for 465, false for other ports
