@@ -96,11 +96,7 @@ export const validateTeamComposition = async (leaderDepartment, memberIds, leade
     }
 
     // Rule 2: Check unique departments
-    const departments = allMembers.map(m => m.department);
-    const uniqueDepartments = new Set(departments);
-    if (uniqueDepartments.size !== departments.length) {
-      errors.push('All team members must be from different departments');
-    }
+    
 
     // Rule 3: Check group constraints (updated to match frontend logic)
     const innovationCount = allMembers.filter(m => 
