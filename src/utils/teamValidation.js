@@ -95,10 +95,10 @@ export const validateTeamComposition = async (leaderDepartment, memberIds, leade
       errors.push(`Team must have exactly 5 members (currently ${allMembers.length})`);
     }
 
-    // Rule 2: Check unique departments
-    
+    // Rule 2: Extract departments for logging (no uniqueness requirement)
+    const departments = allMembers.map(m => m.department);
 
-    // Rule 3: Check group constraints (updated to match frontend logic)
+    // Rule 3: Check group constraints
     const innovationCount = allMembers.filter(m => 
       isDepartmentInGroup(m.department, DEPARTMENT_GROUPS.innovation)
     ).length;
@@ -111,7 +111,7 @@ export const validateTeamComposition = async (leaderDepartment, memberIds, leade
       isDepartmentInGroup(m.department, DEPARTMENT_GROUPS.foundation)
     ).length;
 
-    // Updated validation rules to match frontend
+    // Validation rules
     if (foundationCount !== 1) {
       errors.push(`Must have exactly 1 foundation group member (currently ${foundationCount})`);
     }
