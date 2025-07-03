@@ -8,7 +8,8 @@ const app = express();
 
 const allowedOrigins = [
   'https://www.rebootbmsit.xyz',
-  'http://localhost:5713', 
+  'http://localhost:5713',
+  'http://localhost:5714', 
 ];
 
 app.use(cors({
