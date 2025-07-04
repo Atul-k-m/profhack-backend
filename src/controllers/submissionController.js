@@ -2,7 +2,6 @@ import Submission from '../models/Submission.js';
 import Team from '../models/Team.js';
 import User from '../models/User.js';
 
-// Create a new submission
 export const createSubmission = async (req, res) => {
   try {
     const { trackId, teamId, description } = req.body;
@@ -15,6 +14,26 @@ export const createSubmission = async (req, res) => {
 
     if (!teamId) {
       return res.status(400).json({ message: 'Team ID is required' });
+    }
+
+    // Define tracks mapping
+    const tracksMapping = {
+      'smart-campus': 'Smart & Sustainable Campus',
+      'ai-social-impact': 'AI & Data Science for Social Impact',
+      'edtech': 'Future of Engineering Education (EdTech)',
+      'healthcare': 'Healthcare Engineering',
+      'industry-4': 'Industry 4.0 & Automation',
+      'greentech': 'Climate Resilience & GreenTech',
+      'disaster-management': 'Disaster Management & Infrastructure',
+      'assistive-tech': 'Assistive Technologies for Disabilities',
+      'smart-cities': 'Smart Cities & Urban Mobility',
+      'open-innovation': 'Open Innovation'
+    };
+
+    // Get track name from mapping
+    const trackName = tracksMapping[trackId];
+    if (!trackName) {
+      return res.status(400).json({ message: 'Invalid track ID' });
     }
 
     // Verify that the team exists and user is part of it
@@ -55,11 +74,12 @@ export const createSubmission = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Create new submission
+    // Create new submission with trackName
     const newSubmission = new Submission({
       teamId,
       teamName: team.teamName,
       trackId,
+      trackName, // Add the trackName field
       description: description?.trim() || '',
       submittedBy: userId,
       submittedByName: user.name
