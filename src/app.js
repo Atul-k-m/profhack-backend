@@ -3,7 +3,7 @@ import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import teamsRoutes from './routes/teams.js';
 import userRoutes from './routes/user.js';
-
+import submissionRoutes from './routes/submission.js';
 const app = express();
 
 const allowedOrigins = [
@@ -23,5 +23,5 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/faculty', teamsRoutes);
 app.use('/api/teams', teamsRoutes);
-
+app.use('/api/submissions', submissionRoutes); 
 export default app;
