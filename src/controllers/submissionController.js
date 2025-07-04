@@ -140,7 +140,51 @@ export const getTeamSubmissions = async (req, res) => {
     res.status(500).json({ message: 'Server error fetching team submissions' });
   }
 };
+export const getTeamSubmissionStatus = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const userId = req.user._id || req.user.userId;
 
+    // Verify that the team exists and user is part of it
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    // Check if user is leader or member of the team
+    const isLeader = team.leader.toString() === userId.toString();
+    const isMember = team.members.some(memberId => memberId.toString() === userId.toString());
+
+    if (!isLeader && !isMember) {
+      return res.status(403).json({ message: 'You are not authorized to view this team\'s submissions' });
+    }
+
+    // Get the most recent submission for this team
+    const submission = await Submission.findOne({ teamId: teamId })
+      .populate('submittedBy', 'name department designation')
+      .sort({ submissionDate: -1 }); // Get the most recent submission
+
+    if (!submission) {
+      return res.status(404).json({ message: 'No submission found for this team' });
+    }
+
+    res.json({
+      _id: submission._id,
+      trackId: submission.trackId,
+      trackName: submission.trackName,
+      status: submission.status,
+      submissionDate: submission.submissionDate,
+      createdAt: submission.createdAt,
+      description: submission.description,
+      submittedBy: submission.submittedBy,
+      submittedByName: submission.submittedByName
+    });
+
+  } catch (error) {
+    console.error('Get team submission status error:', error);
+    res.status(500).json({ message: 'Server error fetching team submission status' });
+  }
+};
 // Get submission by ID
 export const getSubmissionById = async (req, res) => {
   try {
