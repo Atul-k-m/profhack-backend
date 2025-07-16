@@ -7,7 +7,6 @@ export const createTeam = async (req, res) => {
   try {
     const { teamName, description, members } = req.body;
     const leaderId = req.user._id || req.user.userId;
-    const leaderDepartment = req.user.department;
 
     // Input validation
     if (!teamName || !teamName.trim()) {
@@ -33,16 +32,8 @@ export const createTeam = async (req, res) => {
       return res.status(400).json({ message: 'Team name already exists' });
     }
 
-    // Check if leader has gender information
-    const leader = await User.findById(leaderId).select('gender name');
-    if (!leader.gender) {
-      return res.status(400).json({ 
-        message: 'Please update your profile to include gender information before creating a team.' 
-      });
-    }
-
-    // Validate team composition (now includes gender validation)
-    const validation = await validateTeamComposition(leaderDepartment, uniqueMemberIds, leaderId);
+    // Validate team composition (now only checks member count)
+    const validation = await validateTeamComposition(uniqueMemberIds, leaderId);
     if (!validation.isValid) {
       return res.status(400).json({ 
         message: 'Invalid team composition', 
@@ -60,7 +51,7 @@ export const createTeam = async (req, res) => {
       });
     }
 
-    // Verify all members exist and are faculty
+    // Verify all members exist
     const memberUsers = await User.find({ 
       _id: { $in: uniqueMemberIds }
     }).select('_id name department email designation gender');
@@ -330,7 +321,7 @@ export const addMemberToTeam = async (req, res) => {
       return res.status(400).json({ message: 'User is already a team member' });
     }
 
-    // Check if the user exists and get their department
+    // Check if the user exists
     const newMember = await User.findById(memberId).select('name department gender team');
     if (!newMember) {
       return res.status(404).json({ message: 'User not found' });
@@ -339,26 +330,6 @@ export const addMemberToTeam = async (req, res) => {
     // Check if user already belongs to another team
     if (newMember.team) {
       return res.status(400).json({ message: 'User is already part of another team' });
-    }
-
-    // Check if user has gender information
-    if (!newMember.gender) {
-      return res.status(400).json({ 
-        message: 'Selected user must have gender information in their profile to join a team' 
-      });
-    }
-
-    // Get current team composition including the new member
-    const currentMemberIds = [...team.members, memberId];
-    const leaderDepartment = req.user.department;
-    
-    // Validate team composition with new member
-    const validation = await validateTeamComposition(leaderDepartment, currentMemberIds, userId);
-    if (!validation.isValid) {
-      return res.status(400).json({ 
-        message: 'Adding this member would violate team composition rules', 
-        errors: validation.errors 
-      });
     }
 
     // Add member to team
@@ -455,8 +426,7 @@ export const getAvailableFaculty = async (req, res) => {
     // Find faculty who are not in any team and not current team members
     const availableFaculty = await User.find({ 
       _id: { $nin: existingMemberIds },
-      team: { $exists: false },
-      gender: { $exists: true, $ne: null, $ne: '' } // Only users with gender info
+      team: { $exists: false }
     }).select('name department designation email gender');
 
     res.json(availableFaculty);
@@ -518,7 +488,7 @@ export const updateProfile = async (req, res) => {
       email,
       designation,
       department,
-      gender, // Add gender to destructuring
+      gender,
       avatarUrl,
       bio,
       skills,
@@ -531,7 +501,7 @@ export const updateProfile = async (req, res) => {
     if (email       !== undefined) updateData.email = email;
     if (designation !== undefined) updateData.designation = designation;
     if (department  !== undefined) updateData.department = department;
-    if (gender      !== undefined) updateData.gender = gender; // Add gender handling
+    if (gender      !== undefined) updateData.gender = gender;
     if (avatarUrl   !== undefined) updateData.avatarUrl = avatarUrl;
     if (bio         !== undefined) updateData.bio = bio;
 
@@ -550,17 +520,6 @@ export const updateProfile = async (req, res) => {
         });
       }
       updateData.experience = expNum;
-    }
-
-    // Validate gender if provided
-    if (gender !== undefined && gender !== null && gender !== '') {
-      const validGenders = ['M', 'F', 'Male', 'Female'];
-      if (!validGenders.includes(gender)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid gender value. Must be M, F, Male, or Female'
-        });
-      }
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -594,27 +553,5 @@ export const updateProfile = async (req, res) => {
       success: false,
       message: 'Failed to update profile'
     });
-  }
-};
-
-// Helper function to check if a user can create/join teams (has gender set)
-export const checkUserEligibilityForTeam = async (userId) => {
-  try {
-    const user = await User.findById(userId).select('gender name');
-    if (!user) {
-      return { eligible: false, message: 'User not found' };
-    }
-    
-    if (!user.gender) {
-      return { 
-        eligible: false, 
-        message: `Please update your profile to include gender information before creating or joining a team.` 
-      };
-    }
-    
-    return { eligible: true };
-  } catch (error) {
-    console.error('Error checking user eligibility:', error);
-    return { eligible: false, message: 'Error checking user eligibility' };
   }
 };
