@@ -33,7 +33,7 @@ const submissionSchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true,
-    maxlength: 1000
+    maxlength: 10000
   },
   submittedBy: {
     type: mongoose.Schema.Types.ObjectId,
